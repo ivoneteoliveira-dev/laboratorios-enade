@@ -1,0 +1,805 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light}body{margin:0}</style>
+<title>Laboratórios do ENADE</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: tela de escolha do curso e, depois, bancada de laboratório (palco à esquerda, código/fórmulas à direita). */
+:root{
+  --bg:#f3f5f9; --panel:#ffffff; --ink:#14203f; --muted:#5a6785; --line:#d5dbe8;
+  --navy:#1f2a5c; --accent:#0f8b8d; --accent-ink:#ffffff; --hot:#e08a00; --hot-bg:#fff1d6;
+  --ok:#17803d; --bad:#c0392b; --code-bg:#101a38; --code-ink:#dfe6fb; --code-hl:#2a3f86;
+  --cell:#eaf0fb; --cell-line:#9db0dc;
+  --font-d:'Space Grotesk',system-ui,sans-serif; --font-b:'Inter',system-ui,sans-serif; --font-m:'JetBrains Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b1226; --panel:#131d3b; --ink:#e7ecfb; --muted:#9aa8cc; --line:#27345f;
+  --navy:#8fa4ff; --accent:#2cc4c6; --accent-ink:#06223a; --hot:#ffb03a; --hot-bg:#3a2d10;
+  --ok:#4cd081; --bad:#ff7a6b; --code-bg:#0a1130; --code-ink:#dfe6fb; --code-hl:#2a3f86;
+  --cell:#1a2850; --cell-line:#3d5199; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0b1226; --panel:#131d3b; --ink:#e7ecfb; --muted:#9aa8cc; --line:#27345f;
+  --navy:#8fa4ff; --accent:#2cc4c6; --accent-ink:#06223a; --hot:#ffb03a; --hot-bg:#3a2d10;
+  --ok:#4cd081; --bad:#ff7a6b; --code-bg:#0a1130; --code-ink:#dfe6fb; --code-hl:#2a3f86;
+  --cell:#1a2850; --cell-line:#3d5199; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-b);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 40px}
+.wrap{max-width:1100px;margin:0 auto}
+h1{font-family:var(--font-d);font-size:clamp(1.5rem,4vw,2.2rem);margin:0;line-height:1.12;text-wrap:balance}
+.sub{color:var(--muted);margin:6px 0 0;max-width:62ch}
+.eyebrow{font:600 12px var(--font-m);text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin:0 0 6px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--hot);outline-offset:2px}
+button{font-family:var(--font-b)}
+
+/* tela de escolha */
+.home{display:flex;flex-direction:column;gap:22px;max-width:920px;margin:0 auto;padding-top:12px}
+.pick{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:700px){.pick{grid-template-columns:minmax(0,1fr)}}
+.pc{display:flex;flex-direction:column;gap:10px;text-align:left;background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:20px;cursor:pointer;color:var(--ink);font:inherit;min-width:0;transition:border-color .2s,transform .2s}
+.pc:hover{border-color:var(--accent);transform:translateY(-2px)}
+.pc .ic{width:46px;height:46px;border-radius:10px;background:var(--navy);display:grid;place-items:center}
+.pc .ic svg{width:26px;height:26px;stroke:var(--bg);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.pc .cn{font:600 12px var(--font-m);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.pc h2{font-family:var(--font-d);font-size:1.3rem;margin:0;line-height:1.2;text-wrap:balance}
+.pc p{margin:0;color:var(--muted)}
+.pc .li{display:flex;flex-wrap:wrap;gap:6px}
+.pc .li span{font:600 12px var(--font-m);padding:3px 8px;border-radius:99px;border:1px solid var(--line);color:var(--ink)}
+.pc .go{margin-top:6px;font:600 14px var(--font-b);color:var(--accent)}
+.foot{color:var(--muted);font-size:13px;margin:0}
+
+/* curso aberto */
+#course{display:flex;flex-direction:column;gap:16px}
+[hidden]{display:none!important}
+header.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:end;justify-content:space-between}
+nav{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+nav button{flex:none;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:600 14px var(--font-b);padding:9px 14px;border-radius:8px;cursor:pointer}
+nav button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.lab{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:16px}
+.lab.wide{grid-template-columns:minmax(0,1fr)}
+@media (max-width:820px){.lab{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.card h2{font-family:var(--font-d);font-size:1.05rem;margin:0 0 4px}
+.lead{color:var(--muted);margin:0 0 12px}
+.ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.ctrl input[type=text],.ctrl input[type=number],.ctrl select{font:600 15px var(--font-m);padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.ctrl input[type=number]{width:84px}
+.ctrl input.txt{flex:1 1 220px;min-width:0}
+.ctrl label.mini{display:flex;align-items:center;gap:6px;font:600 13px var(--font-m);color:var(--muted)}
+.btn{border:1px solid var(--navy);background:transparent;color:var(--navy);font:600 13px var(--font-b);padding:8px 12px;border-radius:8px;cursor:pointer}
+.btn.p{background:var(--navy);color:var(--bg)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
+.seg button{border:0;background:transparent;color:var(--muted);font:600 13px var(--font-b);padding:8px 12px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--navy);color:var(--bg)}
+.sliders{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px 18px;width:100%}
+.fld{display:flex;flex-direction:column;gap:2px;font:600 12px var(--font-b);color:var(--muted);min-width:0}
+.fld b{font:600 14px var(--font-m);color:var(--ink)}
+.fld input[type=range]{width:100%;accent-color:var(--accent)}
+.stage{min-height:250px;border:1px dashed var(--line);border-radius:8px;padding:14px;overflow-x:auto;display:flex;align-items:center;justify-content:center}
+.stage.col{flex-direction:column;align-items:stretch;justify-content:flex-start;gap:12px}
+.log{margin-top:12px;padding:10px 12px;border-left:4px solid var(--accent);background:var(--bg);border-radius:0 8px 8px 0;min-height:3.2em}
+.log.err{border-color:var(--bad)}
+.badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.badge{font:600 12px var(--font-m);padding:3px 8px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+.badge b{color:var(--ink)}
+.out{font:600 14px var(--font-m);margin-top:8px;min-height:1.6em;color:var(--accent);overflow-wrap:anywhere}
+pre.code{margin:0;background:var(--code-bg);color:var(--code-ink);border-radius:8px;padding:10px 0;font:13px/1.55 var(--font-m);overflow-x:auto}
+pre.code span{display:block;padding:0 14px;white-space:pre;border-left:3px solid transparent}
+pre.code span.hl{background:var(--code-hl);border-left-color:var(--hot)}
+.note{margin-top:12px;font-size:14px;color:var(--muted)}
+.note b{color:var(--ink)}
+svg text{font:600 13px var(--font-m);fill:var(--ink)}
+svg .tk{font:400 11px var(--font-m);fill:var(--muted)}
+
+/* César */
+.pairs{display:flex;flex-wrap:wrap;gap:4px;justify-content:center}
+.pair{display:flex;flex-direction:column;align-items:center;font:600 15px var(--font-m);border:2px solid var(--cell-line);border-radius:6px;background:var(--cell);min-width:26px;transition:background .15s,border-color .15s}
+.pair span{padding:3px 4px}
+.pair .o{border-top:1px solid var(--cell-line);color:var(--accent)}
+.pair.hot{background:var(--hot-bg);border-color:var(--hot)}
+.pair .q{color:var(--muted)}
+.bf{width:100%;max-height:270px;overflow:auto;font:600 13px var(--font-m);display:flex;flex-direction:column;gap:3px}
+.bf div{display:flex;gap:10px;padding:4px 8px;border-radius:6px;border:1px solid transparent;overflow-wrap:anywhere}
+.bf div i{font-style:normal;color:var(--muted);flex:none;width:44px}
+.bf div.hot{background:var(--hot-bg);border-color:var(--hot)}
+.bf div.found{background:var(--accent);color:var(--accent-ink)}
+.bf div.found i{color:var(--accent-ink)}
+/* Hash */
+.hx{width:100%;display:flex;flex-direction:column;gap:2px;margin-bottom:8px}
+.hexg{display:flex;flex-wrap:wrap;gap:4px 12px;font:600 14px var(--font-m)}
+.hexg span.d{background:var(--hot-bg);color:var(--hot);border-radius:3px}
+.hx .tag,.tag{font:600 11px var(--font-m);color:var(--accent);text-transform:uppercase;letter-spacing:.06em}
+/* Senha */
+.pwb{width:100%;display:flex;flex-direction:column;gap:12px}
+.meter{height:12px;border-radius:99px;background:var(--line);overflow:hidden}
+.meter i{display:block;height:100%;width:0;background:var(--bad);transition:width .3s,background .3s}
+.bigt{font:700 clamp(1.3rem,4.5vw,1.9rem) var(--font-d);color:var(--ink);overflow-wrap:anywhere}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips span{font:600 12px var(--font-m);padding:3px 9px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+.chips span.on{border-color:var(--accent);color:var(--accent)}
+/* Firewall */
+.fw{width:100%;display:flex;flex-direction:column;gap:6px}
+.pkt{font:600 14px var(--font-m);padding:8px 10px;border-radius:8px;border:2px solid var(--hot);background:var(--hot-bg);color:var(--ink);overflow-wrap:anywhere}
+.rule{display:grid;grid-template-columns:28px 86px 62px 82px 1fr auto;gap:8px;align-items:center;padding:6px 8px;border:2px solid var(--line);border-radius:8px;font:600 13px var(--font-m);background:var(--bg)}
+.rule .act{padding:2px 6px;border-radius:5px;text-align:center;color:#fff;background:var(--ok)}
+.rule .act.n{background:var(--bad)}
+.rule .btn{padding:4px 8px;font-size:12px}
+.rule.hot{border-color:var(--hot);background:var(--hot-bg)}
+.rule.permit{border-color:var(--ok)}
+.rule.deny{border-color:var(--bad)}
+@media (max-width:560px){.rule{grid-template-columns:24px 80px 52px 1fr;}.rule .po,.rule .btn{grid-column:2 / -1}}
+/* Pilha de memória */
+.mem{display:flex;flex-direction:column;gap:6px;width:100%;max-width:440px}
+.mrow{display:flex;gap:8px;align-items:center}
+.mrow .lbl{flex:0 0 118px;font:600 11px var(--font-m);color:var(--muted);line-height:1.25}
+.mrow .lbl small{display:block;font-weight:400}
+.mrow .cells{display:flex;gap:4px;flex:1}
+.mc{flex:1;min-width:0;text-align:center;border:2px solid var(--cell-line);background:var(--cell);border-radius:6px;padding:4px 0;font:600 13px var(--font-m);transition:background .15s,border-color .15s}
+.mc small{display:block;font:400 10px var(--font-m);color:var(--muted);min-height:13px}
+.mc.buf{border-color:var(--accent)}
+.mc.can{border-color:var(--hot)}
+.mc.bp{border-color:var(--muted)}
+.mc.ret{border-color:var(--navy)}
+.mc.hot{background:var(--hot-bg);border-color:var(--hot)}
+.mc.bad{background:color-mix(in srgb,var(--bad) 22%,var(--bg));border-color:var(--bad);color:var(--ink)}
+.seg-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+/* Canvas */
+.canvas{display:grid;gap:6px;grid-template-columns:repeat(5,minmax(0,1fr));grid-template-areas:"par atv val rel seg" "par rec val can seg" "cus cus cus rcv rcv";width:100%}
+@media (max-width:640px){.canvas{grid-template-columns:minmax(0,1fr);grid-template-areas:"seg" "val" "can" "rel" "rcv" "rec" "atv" "par" "cus"}}
+.blk{display:flex;flex-direction:column;gap:4px;text-align:left;min-height:96px;padding:8px;border:2px dashed var(--cell-line);border-radius:8px;background:var(--bg);color:var(--ink);cursor:pointer;font:inherit;min-width:0}
+.blk b{font:700 12px var(--font-d);color:var(--navy)}
+.blk .ph{font-size:12px;color:var(--muted)}
+.blk.ok{border-style:solid;border-color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,var(--bg))}
+.blk.ok .ph{color:var(--ink)}
+.blk.no{border-color:var(--bad);animation:shake .3s}
+.blk.tip{border-color:var(--hot);background:var(--hot-bg)}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.deck{display:flex;flex-wrap:wrap;gap:6px;width:100%}
+.chip{border:2px solid var(--cell-line);background:var(--cell);color:var(--ink);padding:6px 10px;border-radius:8px;font:500 13px var(--font-b);cursor:pointer;text-align:left;max-width:100%}
+.chip.sel{border-color:var(--hot);background:var(--hot-bg)}
+/* gráficos */
+.chart{width:100%;max-width:560px;height:auto}
+.flist{display:flex;flex-direction:column;gap:6px;flex:1 1 200px;min-width:0}
+.fbtn{display:flex;gap:8px;align-items:center;text-align:left;border:2px solid var(--line);background:var(--bg);color:var(--ink);padding:6px 10px;border-radius:8px;font:500 13px var(--font-b);cursor:pointer}
+.fbtn i{font:600 12px var(--font-m);font-style:normal;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--navy);color:var(--bg);flex:none}
+.fbtn.sel{border-color:var(--hot);background:var(--hot-bg)}
+.mvp{display:flex;flex-wrap:wrap;gap:14px;width:100%;align-items:flex-start}
+.mvp svg{flex:1 1 300px;min-width:0;max-width:440px;height:auto}
+.bars{width:100%;display:flex;flex-direction:column;gap:10px}
+.hb{display:flex;flex-direction:column;gap:3px;font:600 13px var(--font-m)}
+.hb .t{height:18px;background:var(--line);border-radius:5px;overflow:hidden}
+.hb .t i{display:block;height:100%;width:0;background:var(--accent);transition:width .3s}
+.hb.cac .t i{background:var(--hot)}
+.verd{padding:10px 12px;border-radius:8px;font:700 15px var(--font-d);background:var(--bg);border:2px solid var(--line)}
+.verd.ok{border-color:var(--ok);color:var(--ok)}
+.verd.mid{border-color:var(--hot);color:var(--hot)}
+.verd.bad{border-color:var(--bad);color:var(--bad)}
+/* quiz */
+.q{display:flex;flex-direction:column;gap:12px}
+.q .tagrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+.q h3{margin:0;font:600 1.05rem var(--font-b);text-wrap:balance}
+.opts{display:grid;gap:8px}
+.opt{text-align:left;border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:10px 12px;border-radius:8px;font:500 14px var(--font-b);cursor:pointer}
+.opt:hover:not(:disabled){border-color:var(--accent)}
+.opt.right{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 18%,var(--bg))}
+.opt.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 16%,var(--bg))}
+.score{font:600 14px var(--font-m)}
+.bar{height:8px;background:var(--line);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+.why{padding:10px 12px;background:var(--bg);border-radius:8px;border-left:4px solid var(--navy)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+<div class="wrap">
+  <section id="home" class="home">
+    <div>
+      <p class="eyebrow">UNIFAN · Preparação para o ENADE</p>
+      <h1>Laboratórios interativos</h1>
+      <p class="sub">Escolha o seu curso. O simulador abre na hora, com laboratórios para operar, animações passo a passo e um quiz de missões.</p>
+    </div>
+    <div class="pick">
+      <button class="pc" data-go="ads" type="button" id="go-ads">
+        <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg></span>
+        <span class="cn">Análise e Desenvolvimento de Sistemas</span>
+        <h2>Laboratório de Empreendedorismo</h2>
+        <p>Monte um Canvas, calcule o ponto de equilíbrio, o CAC e o LTV, priorize um MVP e descubra quando o caixa acaba.</p>
+        <span class="li"><span>Canvas</span><span>Equilíbrio</span><span>CAC e LTV</span><span>MVP</span><span>Caixa</span><span>Missões</span></span>
+        <span class="go">Abrir simulador de ADS →</span>
+      </button>
+      <button class="pc" data-go="ec" type="button" id="go-ec">
+        <span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><polyline points="8 12 11 15 16 9"/></svg></span>
+        <span class="cn">Engenharia da Computação</span>
+        <h2>Laboratório de Segurança de Sistemas de Computação</h2>
+        <p>Cifre e quebre mensagens, veja o efeito avalanche do hash, meça a força de senhas, filtre pacotes e provoque um estouro de buffer.</p>
+        <span class="li"><span>Cifras</span><span>Hash</span><span>Senhas</span><span>Firewall</span><span>Buffer</span><span>Missões</span></span>
+        <span class="go">Abrir simulador de EC →</span>
+      </button>
+    </div>
+    <p class="foot">Todos os dados são fictícios e servem apenas para estudo. Não digite senhas reais nem dados pessoais.</p>
+  </section>
+
+  <section id="course" hidden>
+    <header class="top">
+      <div>
+        <p class="eyebrow" id="cnome"></p>
+        <h1 id="ctitle"></h1>
+        <p class="sub" id="csub"></p>
+      </div>
+      <button class="btn" id="back" type="button">← Trocar de curso</button>
+    </header>
+    <nav id="tabs" role="tablist" aria-label="Laboratórios"></nav>
+    <main id="view"></main>
+  </section>
+</div>
+<script>
+(function(){
+'use strict';
+const $=(s,r)=>(r||document).querySelector(s);
+const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const sleep=ms=>new Promise(r=>setTimeout(r,ms*(window.__fast?0.01:1)));
+const fmt=(n,d)=>n.toLocaleString('pt-BR',{maximumFractionDigits:d||0,minimumFractionDigits:d||0});
+const brl=(n,d)=>(n<0?'-':'')+'R$ '+fmt(Math.abs(n),d||0);
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const hex=(n,w)=>('0000000000'+(n>>>0).toString(16).toUpperCase()).slice(-w);
+let curso=null,epoch=0,busy=false;
+
+/* ---------- peças comuns ---------- */
+const codeHTML=(lines,hl)=>lines.map((l,i)=>'<span'+(hl&&hl.indexOf(i)>=0?' class="hl"':'')+'>'+esc(l)+' </span>').join('');
+const badges=a=>a.map(b=>'<span class="badge">'+b[0]+' <b>'+b[1]+'</b></span>').join('');
+const log=(t,err)=>{const l=$('#log');if(l){l.textContent=t;l.className='log'+(err?' err':'')}};
+const out=t=>{const o=$('#out');if(o)o.textContent=t};
+const bd=a=>{const b=$('#bd');if(b)b.innerHTML=badges(a)};
+const showCode=(lines,hl,op)=>{$('#code').innerHTML=codeHTML(lines,hl);if(op)$('#codeop').textContent=op};
+const lock=v=>{busy=v;$$('#view .btn').forEach(b=>b.disabled=v)};
+function shell(o){
+  return `<div class="lab${o.wide?' wide':''}"><section class="card"><h2>${o.title}</h2><p class="lead">${o.lead}</p>
+  <div class="ctrl">${o.ctrl}</div><div class="stage${o.col?' col':''}" id="stage"></div><div class="out" id="out"></div>
+  <div class="log" id="log" aria-live="polite">${o.start||'Pronto. Escolha uma operação.'}</div><div class="badges" id="bd"></div></section>
+  <section class="card"><h2>${o.codeTitle}</h2><p class="lead" id="codeop">${o.codeHint||'Selecione uma operação para ver a linha executada.'}</p>
+  <pre class="code" id="code" aria-label="${o.codeTitle}"></pre><p class="note"><b>Na prova:</b> ${o.exam}</p></section></div>`;
+}
+
+/* ---------- SHA-256 (síncrono, conferido contra o Node) ---------- */
+const SHA={K:null,H:null};
+function shaInit(){
+  if(SHA.K)return;const K=[],H=[];let c=2;
+  while(K.length<64){let p=true;for(let d=2;d*d<=c;d++)if(c%d===0){p=false;break}
+    if(p){if(H.length<8)H.push(Math.floor((Math.sqrt(c)%1)*4294967296));K.push(Math.floor((Math.cbrt(c)%1)*4294967296))}c++}
+  SHA.K=K;SHA.H=H;
+}
+function sha256(str){
+  shaInit();
+  const b=unescape(encodeURIComponent(str)),l=b.length,nw=(((l+8)>>6)+1)*16,W=new Array(nw).fill(0);
+  for(let i=0;i<l;i++)W[i>>2]|=b.charCodeAt(i)<<(24-(i%4)*8);
+  W[l>>2]|=0x80<<(24-(l%4)*8);W[nw-1]=l*8;
+  const h=SHA.H.slice(),K=SHA.K,w=new Array(64),R=(x,n)=>(x>>>n)|(x<<(32-n));
+  for(let o=0;o<nw;o+=16){
+    for(let i=0;i<16;i++)w[i]=W[o+i]|0;
+    for(let i=16;i<64;i++){const s0=R(w[i-15],7)^R(w[i-15],18)^(w[i-15]>>>3),s1=R(w[i-2],17)^R(w[i-2],19)^(w[i-2]>>>10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0}
+    let a=h[0],bb=h[1],c=h[2],d=h[3],e=h[4],f=h[5],g=h[6],hh=h[7];
+    for(let i=0;i<64;i++){
+      const S1=R(e,6)^R(e,11)^R(e,25),ch=(e&f)^(~e&g),t1=(hh+S1+ch+K[i]+w[i])|0,S0=R(a,2)^R(a,13)^R(a,22),mj=(a&bb)^(a&c)^(bb&c),t2=(S0+mj)|0;
+      hh=g;g=f;f=e;e=(d+t1)|0;d=c;c=bb;bb=a;a=(t1+t2)|0;
+    }
+    h[0]=(h[0]+a)|0;h[1]=(h[1]+bb)|0;h[2]=(h[2]+c)|0;h[3]=(h[3]+d)|0;h[4]=(h[4]+e)|0;h[5]=(h[5]+f)|0;h[6]=(h[6]+g)|0;h[7]=(h[7]+hh)|0;
+  }
+  return h.map(x=>('00000000'+(x>>>0).toString(16)).slice(-8)).join('');
+}
+window.__sha256=sha256;
+
+/* ---------- quiz genérico (a primeira opção de cada questão é a correta; as opções são embaralhadas) ---------- */
+function quizLab(Q,o){
+  $('#view').innerHTML=`<div class="lab wide"><section class="card"><h2>${o.title}</h2><p class="lead">${o.lead}</p><div id="qbox" class="q"></div></section></div>`;
+  let order=[],i=0,score=0;
+  function start(){order=shuffle(Q.map((_,k)=>k));i=0;score=0;show()}
+  function show(){
+    const box=$('#qbox');
+    if(i>=order.length){
+      const pct=Math.round(score/order.length*100);
+      const msg=pct>=80?o.msgHi:pct>=50?o.msgMid:o.msgLow;
+      box.innerHTML=`<div class="tagrow"><span class="tag">Resultado final</span><span class="score">${score}/${order.length}</span></div><div class="bar"><i style="width:${pct}%"></i></div><h3>Você acertou ${score} de ${order.length} (${pct}%).</h3><p class="why">${msg}</p><div><button class="btn p" id="redo" type="button">Refazer</button></div>`;
+      $('#redo').onclick=start;return;
+    }
+    const q=Q[order[i]],opts=shuffle(q.o.map((t,k)=>({t,ok:k===0})));
+    box.innerHTML=`<div class="tagrow"><span class="tag">Missão ${i+1} de ${order.length}</span><span class="score">Pontos: ${score}</span></div>
+      <div class="bar"><i style="width:${i/order.length*100}%"></i></div><h3>${q.q}</h3>
+      <div class="opts">${opts.map((p,k)=>`<button class="opt" data-k="${k}" type="button">${p.t}</button>`).join('')}</div><div id="fb"></div>`;
+    $$('.opt',box).forEach(b=>b.onclick=()=>{
+      const p=opts[+b.dataset.k];
+      $$('.opt',box).forEach((x,k)=>{x.disabled=true;if(opts[k].ok)x.classList.add('right')});
+      if(p.ok){score++}else{b.classList.add('wrong')}
+      $('#fb').innerHTML=`<p class="why"><b>${p.ok?'Correto.':'Não foi dessa vez.'}</b> ${q.e}</p><div style="margin-top:10px"><button class="btn p" id="nx" type="button">${i+1<order.length?'Próxima':'Ver resultado'}</button></div>`;
+      $('#nx').onclick=()=>{i++;show()};$('#nx').focus();
+    });
+  }
+  start();
+}
+
+/* =====================================================================
+   EC · LABORATÓRIO DE SEGURANÇA DE SISTEMAS DE COMPUTAÇÃO
+   ===================================================================== */
+
+/* ---------- 1. Cifra de César ---------- */
+const CES=['char cifrar_char(char c, int k) {',"  if (c < 'A' || c > 'Z') return c;      // espaço fica igual",
+"  return (c - 'A' + k) % 26 + 'A';       // anda k posições no alfabeto",'}','','void cifrar(char *s, int k) {','  for (int i = 0; s[i]; i++)','    s[i] = cifrar_char(s[i], k);','}','',
+'// decifrar = cifrar com a chave inversa','void decifrar(char *s, int k) { cifrar(s, 26 - k); }','','// força bruta: só existem 25 chaves','for (int k = 1; k <= 25; k++) tentar(texto, k);'];
+const norm=t=>t.toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+const cesar=(t,k)=>norm(t).replace(/[A-Z]/g,c=>String.fromCharCode(((c.charCodeAt(0)-65+k)%26+26)%26+65));
+function labCesar(){
+  $('#view').innerHTML=shell({title:'Cifra de César',lead:'Cada letra anda k posições no alfabeto. Cifre, decifre e depois quebre a cifra como um atacante.',
+    ctrl:`<input id="txt" class="txt" type="text" maxlength="48" value="A SEGURANCA PROTEGE OS DADOS" aria-label="Texto"><label class="mini">k <input id="k" type="number" min="1" max="25" value="3" aria-label="Chave k"></label>
+    <button class="btn p" id="b1" type="button">Cifrar</button><button class="btn" id="b2" type="button">Decifrar</button><button class="btn" id="b3" type="button">Força bruta</button><button class="btn" id="b4" type="button">Frequência</button>`,
+    codeTitle:'Código em C',
+    exam:'segurança cobra a diferença entre cifra simétrica e assimétrica, o tamanho do espaço de chaves e por que cifras clássicas caem diante de força bruta e análise de frequência.'});
+  showCode(CES,[]);
+  const getK=()=>{let k=parseInt($('#k').value,10);if(isNaN(k)||k<1)k=1;if(k>25)k=25;$('#k').value=k;return k};
+  const pairs=(inp,o,upto,hot)=>'<div class="pairs">'+inp.split('').map((c,i)=>{
+    const sp=c===' ';return `<div class="pair${hot===i?' hot':''}"><span>${sp?'·':esc(c)}</span><span class="o">${i<upto?(sp?'·':esc(o[i])):'<b class="q">?</b>'}</span></div>`}).join('')+'</div>';
+  const info=k=>bd([['espaço de chaves','25'],['bits de chave','≈ 4,6'],['k',k]]);
+  async function anim(o,hl,op,msg,k){
+    if(busy)return;const e=epoch;lock(true);const inp=norm($('#txt').value);
+    showCode(CES,hl,op);
+    for(let i=0;i<=inp.length;i++){$('#stage').innerHTML=pairs(inp,o,i,i<inp.length?i:-1);await sleep(40);if(e!==epoch)return}
+    $('#stage').innerHTML=pairs(inp,o,inp.length,-1);out(o);log(msg);info(k);lock(false);
+  }
+  $('#b1').onclick=()=>{const k=getK(),o=cesar($('#txt').value,k);anim(o,[1,2],'cifrar: cada letra anda k posições',`Cifrado com k = ${k}. Em C, (c - 'A' + k) % 26 faz o alfabeto dar a volta depois do Z.`,k)};
+  $('#b2').onclick=()=>{const k=getK(),o=cesar($('#txt').value,26-k);anim(o,[11],'decifrar: cifra com a chave inversa (26 − k)',`Decifrado com 26 − ${k} = ${26-k}. Quem sabe k desfaz a cifra; por isso a chave precisa ficar secreta.`,k)};
+  $('#b3').onclick=async()=>{
+    if(busy)return;const e=epoch;lock(true);const k=getK(),orig=norm($('#txt').value),c=cesar(orig,k);
+    showCode(CES,[14],'força bruta: testa as 25 chaves');
+    $('#stage').innerHTML=`<div style="width:100%"><div class="tag">texto cifrado interceptado</div><div class="out" style="margin:2px 0 8px">${esc(c)}</div><div class="bf" id="bf"></div></div>`;
+    let found=0;
+    for(let t=1;t<=25;t++){
+      const cand=cesar(c,26-t),hit=cand===orig&&!found;if(hit)found=t;
+      $('#bf').insertAdjacentHTML('beforeend',`<div class="${hit?'found':'hot'}"><i>k=${t}</i><span>${esc(cand)}</span></div>`);
+      $('#bf').scrollTop=$('#bf').scrollHeight;await sleep(35);if(e!==epoch)return;
+      const last=$('#bf').lastChild;if(!hit)last.className='';
+    }
+    log(`O atacante testou as 25 chaves e achou texto legível em k = ${found||k}. Espaço de chaves tão pequeno cai em milissegundos.`);info(k);lock(false);
+  };
+  $('#b4').onclick=()=>{
+    if(busy)return;const k=getK(),c=cesar($('#txt').value,k),cnt=new Array(26).fill(0);
+    c.replace(/[A-Z]/g,x=>{cnt[x.charCodeAt(0)-65]++;return x});
+    let mx=0;for(let i=1;i<26;i++)if(cnt[i]>cnt[mx])mx=i;
+    const top=Math.max.apply(null,cnt)||1;
+    const bars=cnt.map((v,i)=>{const h=Math.round(v/top*110),x=10+i*19;
+      return `<rect x="${x}" y="${130-h}" width="15" height="${h}" rx="2" fill="${i===mx?'var(--hot)':'var(--accent)'}"/><text class="tk" x="${x+7.5}" y="146" text-anchor="middle">${String.fromCharCode(65+i)}</text>`}).join('');
+    $('#stage').innerHTML=`<svg class="chart" viewBox="0 0 510 156" role="img" aria-label="Frequência das letras no texto cifrado">${bars}</svg>`;
+    showCode(CES,[14],'frequência: a letra mais comum revela a chave');
+    const g=mx,guess=cesar(c,26-g),ok=guess===norm($('#txt').value);
+    out(`mais frequente: ${String.fromCharCode(65+mx)} (${cnt[mx]}x)`);
+    log(`Em português a letra mais comum é o A. Se ${String.fromCharCode(65+mx)} aparece mais, a chave provável é ${g}. ${ok?'Decifrando com ela, o texto sai certo.':'Com texto curto a estatística falha; um texto maior acerta mais.'}`);
+    info(k);
+  };
+  $('#stage').innerHTML='<p class="lead" style="margin:0">Escolha uma operação para ver as letras andarem.</p>';info(3);
+}
+
+/* ---------- 2. Hash e integridade ---------- */
+const HSH=['#include <openssl/sha.h>','','unsigned char h[SHA256_DIGEST_LENGTH];   // 32 bytes = 256 bits','SHA256((unsigned char*)msg, strlen(msg), h);','',
+'for (int i = 0; i < 32; i++) printf("%02x", h[i]);','','// verificação de integridade','if (memcmp(h, referencia, 32) == 0) puts("íntegro");','else                                 puts("ADULTERADO");'];
+const bitsDiff=(a,b)=>{let n=0;for(let i=0;i<64;i++){let x=parseInt(a[i],16)^parseInt(b[i],16);while(x){n+=x&1;x>>=1}}return n};
+function labHash(){
+  $('#view').innerHTML=shell({title:'Hash e integridade (SHA-256)',lead:'Digite uma mensagem. Qualquer mudança, mesmo de 1 bit, troca o hash inteiro. Guarde uma referência e verifique se o arquivo foi adulterado.',
+    ctrl:`<input id="msg" class="txt" type="text" maxlength="80" value="Transferir R$ 100 para Ana" aria-label="Mensagem"><button class="btn" id="b1" type="button">Alterar 1 bit</button><button class="btn" id="b2" type="button">Guardar referência</button><button class="btn p" id="b3" type="button">Verificar</button>`,
+    codeTitle:'Código em C',exam:'hash garante integridade, não confidencialidade: não existe "decifrar" um hash. A questão costuma pedir o mecanismo que detecta adulteração e a forma correta de guardar senhas (hash com salt).'});
+  let cur=sha256($('#msg').value),prev=cur,ref=null;
+  const blk=(lab,h,cmp)=>{const g=[];for(let i=0;i<64;i+=8){g.push('<span>'+h.slice(i,i+8).split('').map((ch,j)=>cmp&&cmp[i+j]!==ch?`<span class="d">${ch}</span>`:ch).join('')+'</span>')}
+    return `<div class="hx"><span class="tag">${lab}</span><div class="hexg">${g.join('')}</div></div>`};
+  function paint(msg,err){
+    const d=bitsDiff(cur,prev);
+    $('#stage').innerHTML='<div style="width:100%">'+blk('hash anterior',prev)+blk('hash atual (destaque = mudou)',cur,prev)+(ref?blk('referência guardada',ref):'')+'</div>';
+    bd([['entrada',new Blob([$('#msg').value]).size+' bytes'],['saída','256 bits'],['bits que mudaram',d+' de 256']]);
+    if(msg)log(msg,err);
+  }
+  const onType=()=>{prev=cur;cur=sha256($('#msg').value);const d=bitsDiff(cur,prev);showCode(HSH,[3,5],'SHA256 calcula o resumo de 256 bits');
+    paint(d?`Mudaram ${d} de 256 bits (${Math.round(d/2.56)}%). Esse é o efeito avalanche: uma pequena mudança altera cerca de metade do hash.`:'Nada mudou: mesma entrada, mesmo hash.')};
+  $('#msg').addEventListener('input',onType);
+  $('#b1').onclick=()=>{const el=$('#msg'),v=el.value;if(!v){log('Digite uma mensagem antes.',true);return}
+    const c=v.charCodeAt(v.length-1),n=String.fromCharCode(c^1);el.value=v.slice(0,-1)+n;onType();
+    log(`Trocou 1 bit do último caractere ("${v.slice(-1)}" → "${n}"). Resultado: ${bitsDiff(cur,prev)} de 256 bits do hash mudaram.`)};
+  $('#b2').onclick=()=>{ref=cur;showCode(HSH,[7],'a referência é o hash do arquivo original');paint('Referência guardada. Agora edite a mensagem e clique em Verificar.')};
+  $('#b3').onclick=()=>{if(!ref){log('Guarde uma referência antes de verificar.',true);return}
+    if(cur===ref){showCode(HSH,[8],'memcmp igual: arquivo íntegro');paint('Íntegro: o hash atual é igual ao da referência.')}
+    else{showCode(HSH,[9],'memcmp diferente: arquivo adulterado');paint(`ADULTERADO: o hash difere da referência em ${bitsDiff(cur,ref)} de 256 bits.`,true)}};
+  showCode(HSH,[3,5],'SHA256 calcula o resumo de 256 bits');paint('Digite ou use "Alterar 1 bit" para ver o efeito avalanche.');
+}
+
+/* ---------- 3. Senhas e força bruta ---------- */
+const PWC=['int pool = 0;','if (tem_minuscula) pool += 26;','if (tem_maiuscula) pool += 26;','if (tem_digito)    pool += 10;','if (tem_simbolo)   pool += 33;','',
+'double bits = len * log2(pool);       // entropia','double tentativas = pow(2, bits) / 2;   // em média, metade do espaço','double segundos = tentativas / taxa;   // taxa = palpites por segundo'];
+const COMUM=['123456','12345678','123456789','senha','password','qwerty','admin','abc123','111111','iloveyou','senha123','12345'];
+function tempo(s){
+  if(s<1)return 'menos de 1 segundo';
+  const u=[[60,'segundos',1],[3600,'minutos',60],[86400,'horas',3600],[31557600,'dias',86400]];
+  for(const x of u)if(s<x[0])return fmt(s/x[2],s/x[2]<10?1:0)+' '+x[1];
+  const a=s/31557600;
+  if(a<1000)return fmt(a,a<10?1:0)+' anos';
+  if(a<1e6)return fmt(a/1000,1)+' mil anos';
+  if(a<1e9)return fmt(a/1e6,1)+' milhões de anos';
+  if(a<1e12)return fmt(a/1e9,1)+' bilhões de anos';
+  return 'mais que a idade do universo';
+}
+function labSenha(){
+  $('#view').innerHTML=shell({title:'Senhas e força bruta',lead:'A entropia mede quantos palpites o atacante precisa fazer. Veja como tamanho e tipo de caractere mudam o tempo de quebra.',
+    ctrl:`<input id="pw" class="txt" type="text" maxlength="40" value="Senha@2024" autocomplete="off" spellcheck="false" aria-label="Senha de teste">
+    <select id="rate" aria-label="Tipo de ataque"><option value="100">Online (100 palpites/s)</option><option value="1e4">Offline, hash lento (10 mil/s)</option><option value="1e10" selected>Offline, hash rápido (10 bi/s)</option></select>
+    <button class="btn" id="g1" type="button">Gerar aleatória (16)</button>
+    <button class="btn" data-p="123456" type="button">123456</button><button class="btn" data-p="Senha@2024" type="button">Senha@2024</button><button class="btn" data-p="Tr0ub4dor&3" type="button">Tr0ub4dor&amp;3</button>`,
+    codeTitle:'Código em C',codeHint:'Cálculo de entropia usado pela página.',exam:'entropia = comprimento × log2(tamanho do alfabeto). Aumentar o comprimento vale mais do que trocar letras por símbolos, e senhas previsíveis valem menos do que o cálculo mostra.'});
+  const calc=()=>{
+    const p=$('#pw').value,rate=parseFloat($('#rate').value);
+    const cl=[/[a-z]/.test(p),/[A-Z]/.test(p),/[0-9]/.test(p),/[^A-Za-z0-9]/.test(p)],pool=(cl[0]?26:0)+(cl[1]?26:0)+(cl[2]?10:0)+(cl[3]?33:0);
+    const bits=p.length&&pool?p.length*Math.log2(pool):0;
+    const dict=COMUM.indexOf(p.toLowerCase())>=0,pat=/^[A-Za-zÀ-ú]+[@#$!]?\d{2,4}[!@#$]?$/.test(p)&&!dict;
+    let eff=bits,nota='';
+    if(dict){eff=0;nota='Está em listas de senhas vazadas: um ataque de dicionário a acha em menos de 1 segundo.'}
+    else if(pat){eff=Math.min(bits,28);nota='Padrão previsível (palavra + símbolo + número): regras de dicionário reduzem a busca para cerca de 28 bits.'}
+    const secs=Math.pow(2,eff)/2/rate,pct=Math.min(100,eff/80*100);
+    const col=eff<28?'var(--bad)':eff<50?'var(--hot)':'var(--ok)',nome=eff<28?'fraca':eff<50?'média':eff<70?'forte':'muito forte';
+    $('#stage').innerHTML=`<div class="pwb"><div class="chips"><span class="${cl[0]?'on':''}">a-z · 26</span><span class="${cl[1]?'on':''}">A-Z · 26</span><span class="${cl[2]?'on':''}">0-9 · 10</span><span class="${cl[3]?'on':''}">símbolos · 33</span></div>
+      <div class="meter" role="img" aria-label="Força ${nome}"><i style="width:${pct}%;background:${col}"></i></div>
+      <div><span class="tag">tempo médio para quebrar</span><div class="bigt">${p?tempo(secs):'—'}</div></div></div>`;
+    out(p?`${fmt(bits,1)} bits teóricos · força ${nome}`:'');
+    bd([['tamanho',p.length],['alfabeto',pool],['entropia efetiva',fmt(eff,1)+' bits'],['palpites',p?'2^'+fmt(Math.max(eff-1,0),1):'—']]);
+    log(nota||(p?`${p.length} caracteres de um alfabeto de ${pool} símbolos: ${fmt(bits,1)} bits. Cada bit a mais dobra o trabalho do atacante.`:'Digite uma senha de teste.'),dict);
+    showCode(PWC,[6,7,8],'entropia, palpites e tempo de quebra');
+  };
+  $('#pw').addEventListener('input',calc);$('#rate').addEventListener('change',calc);
+  $$('[data-p]').forEach(b=>b.onclick=()=>{$('#pw').value=b.dataset.p;calc()});
+  $('#g1').onclick=()=>{const al='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&*?',a=new Uint32Array(16);
+    (window.crypto||{getRandomValues:x=>x.forEach((_,i)=>x[i]=Math.random()*4294967296)}).getRandomValues(a);
+    $('#pw').value=Array.from(a).map(n=>al[n%al.length]).join('');calc()};
+  calc();
+}
+
+/* ---------- 4. Firewall ---------- */
+const FWC=['typedef struct { int acao; int proto; int origem; int porta; } Regra;','acao_t filtrar(Pacote *p) {','  for (int i = 0; i < n_regras; i++) {','    if (casa(p, &regra[i]))',
+'      return regra[i].acao;       // a primeira que casar vence','  }','  return POLITICA_PADRAO;         // nada casou: o mais seguro é negar','}'];
+function labFirewall(){
+  const rules=[{a:'PERMITIR',p:'TCP',o:'qualquer',po:'443'},{a:'PERMITIR',p:'TCP',o:'interna',po:'22'},{a:'NEGAR',p:'TCP',o:'externa',po:'22'},{a:'PERMITIR',p:'UDP',o:'qualquer',po:'53'}];
+  let def='NEGAR',pass=0,drop=0,state=null;
+  const PK=[['HTTPS de fora','externa','TCP',443],['SSH de dentro','interna','TCP',22],['SSH de fora','externa','TCP',22],['Telnet de fora','externa','TCP',23],['DNS de fora','externa','UDP',53]];
+  $('#view').innerHTML=shell({title:'Firewall com regras em ordem',lead:'Envie pacotes e veja qual regra decide. Troque a ação de uma regra ou a política padrão e repita o teste.',
+    ctrl:PK.map((p,i)=>`<button class="btn" data-i="${i}" type="button">${p[0]}</button>`).join('')+
+    `<select id="so" aria-label="Origem"><option>externa</option><option>interna</option></select><select id="sp" aria-label="Protocolo"><option>TCP</option><option>UDP</option></select><input id="spo" type="number" min="1" max="65535" value="8080" aria-label="Porta"><button class="btn p" id="env" type="button">Enviar pacote</button><button class="btn" id="dflt" type="button"></button>`,
+    codeTitle:'Código em C',exam:'regras são avaliadas em ordem e a primeira que casa vence. A boa prática é negar por padrão e liberar só o necessário (menor privilégio).'});
+  const draw=hot=>{
+    $('#stage').innerHTML=`<div class="fw">${state?`<div class="pkt">pacote: ${state.o} → ${state.p}/${state.port}</div>`:'<div class="lead" style="margin:0">Escolha um pacote nos botões.</div>'}`+
+    rules.map((r,i)=>`<div class="rule${hot&&hot.i===i?' '+hot.c:''}"><span>${i+1}</span><span class="act${r.a==='NEGAR'?' n':''}">${r.a}</span><span>${r.p}</span><span>${r.o}</span><span class="po">porta ${r.po}</span><button class="btn" data-t="${i}" type="button">trocar</button></div>`).join('')+
+    `<div class="rule${hot&&hot.i===99?' '+hot.c:''}"><span>·</span><span class="act${def==='NEGAR'?' n':''}">${def}</span><span style="grid-column:3 / -1">política padrão (nenhuma regra casou)</span></div></div>`;
+    $$('[data-t]').forEach(b=>b.onclick=()=>{if(busy)return;const r=rules[+b.dataset.t];r.a=r.a==='NEGAR'?'PERMITIR':'NEGAR';draw();log(`Regra ${+b.dataset.t+1} agora é ${r.a}. Reenvie o pacote para ver a diferença.`)});
+    $$('#view .btn').forEach(b=>b.disabled=busy);
+  };
+  $('#dflt').textContent='Padrão: '+def;
+  const casa=(r,k)=>(r.p==='qualquer'||r.p===k.p)&&(r.o==='qualquer'||r.o===k.o)&&(r.po==='*'||+r.po===k.port);
+  async function send(k){
+    if(busy)return;const e=epoch;state=k;lock(true);let hit=-1;
+    for(let i=0;i<rules.length;i++){
+      showCode(FWC,[2,3],'testando a regra '+(i+1));draw({i,c:'hot'});log(`Testando a regra ${i+1}…`);await sleep(420);if(e!==epoch)return;
+      if(casa(rules[i],k)){hit=i;break}
+    }
+    let ok;
+    if(hit>=0){ok=rules[hit].a==='PERMITIR';showCode(FWC,[4],'a regra casou: a decisão sai aqui');draw({i:hit,c:ok?'permit':'deny'});
+      log(`A regra ${hit+1} casou primeiro: ${rules[hit].a}. As regras seguintes nem são lidas.`)}
+    else{ok=def==='PERMITIR';showCode(FWC,[6],'nenhuma regra casou: vale a política padrão');draw({i:99,c:ok?'permit':'deny'});
+      log(`Nenhuma regra casou. A política padrão (${def}) decidiu. ${def==='PERMITIR'?'Isso deixa passar tráfego desconhecido: arriscado.':'Negar por padrão barra o que ninguém autorizou.'}`,def==='PERMITIR')}
+    ok?pass++:drop++;out(ok?'pacote PERMITIDO':'pacote NEGADO');bd([['permitidos',pass],['negados',drop]]);lock(false);draw({i:hit>=0?hit:99,c:ok?'permit':'deny'});$('#dflt').textContent='Padrão: '+def;
+  }
+  $$('#view [data-i]').forEach(b=>b.onclick=()=>{const p=PK[+b.dataset.i];send({o:p[1],p:p[2],port:p[3]})});
+  $('#env').onclick=()=>{let po=parseInt($('#spo').value,10);if(isNaN(po)||po<1||po>65535){log('Digite uma porta entre 1 e 65535.',true);return}send({o:$('#so').value,p:$('#sp').value,port:po})};
+  $('#dflt').onclick=()=>{if(busy)return;def=def==='NEGAR'?'PERMITIR':'NEGAR';$('#dflt').textContent='Padrão: '+def;draw();log(`Política padrão agora é ${def}.`)};
+  showCode(FWC,[]);draw();bd([['permitidos',0],['negados',0]]);
+}
+
+/* ---------- 5. Estouro de buffer ---------- */
+const BUF_BAD=['void ler(char *entrada) {','  char buf[8];','  strcpy(buf, entrada);        // copia até o \\0, sem limite de tamanho','}                              // ret: volta ao endereço salvo na pilha'];
+const BUF_OK=['void ler(char *entrada) {','  char buf[8];','  strncpy(buf, entrada, sizeof(buf) - 1);',"  buf[sizeof(buf) - 1] = '\\0';",'}                              // ret: volta ao endereço salvo na pilha'];
+function labBuffer(){
+  let mode='strcpy',can=false;
+  $('#view').innerHTML=shell({title:'Estouro de buffer na pilha',lead:'A entrada é copiada para buf[8]. Quando passa de 8 bytes, invade o que está acima: canário, EBP salvo e endereço de retorno.',
+    ctrl:`<input id="in" class="txt" type="text" maxlength="24" value="OLA" aria-label="Entrada" autocomplete="off"><button class="btn p" id="run" type="button">Executar</button>
+    <button class="btn" data-s="OLA" type="button">Curta</button><button class="btn" data-s="ABCDEFGH" type="button">8 letras</button><button class="btn" data-s="AAAAAAAAAAAAAAAAAAAA" type="button">Longa (20 A)</button>
+    <span class="seg" id="sm" role="group" aria-label="Função de cópia"><button type="button" data-m="strcpy" aria-pressed="true">strcpy</button><button type="button" data-m="strncpy" aria-pressed="false">strncpy</button></span>
+    <span class="seg" id="sc" role="group" aria-label="Canário"><button type="button" data-c="0" aria-pressed="true">sem canário</button><button type="button" data-c="1" aria-pressed="false">com canário</button></span>`,
+    codeTitle:'Código em C',exam:'estouro de buffer vem de copiar sem checar limites. Defesas: funções com limite de tamanho, canário de pilha, ASLR e pilha não executável (NX).'});
+  const mk=()=>{const mem=[],reg=[];for(let i=0;i<8;i++){mem.push(null);reg.push('buf')}
+    if(can)[0x00,0x5A,0xC3,0x9E].forEach(b=>{mem.push(b);reg.push('can')});
+    [0x58,0xF0,0xFF,0xBF].forEach(b=>{mem.push(b);reg.push('bp')});[0x10,0x9A,0x04,0x08].forEach(b=>{mem.push(b);reg.push('ret')});return{mem,reg}};
+  const base=0xBFFFF030,NM={can:'canário',bp:'EBP salvo',ret:'endereço de retorno'};
+  function draw(m,hot,bad){
+    let h='<div class="mem">';
+    for(let r=m.mem.length/4-1;r>=0;r--){
+      const rg=m.reg[r*4],nm=rg==='buf'?`buf[${r*4}..${r*4+3}]`:NM[rg];
+      h+=`<div class="mrow"><div class="lbl">${nm}<small>0x${hex(base+r*4,8)}</small></div><div class="cells">`;
+      for(let c=0;c<4;c++){const o=r*4+c,v=m.mem[o],ch=v==null?'':(v>=32&&v<127?String.fromCharCode(v):(v===0?'\\0':'.'));
+        h+=`<div class="mc ${rg}${hot===o?' hot':''}${bad&&bad[o]?' bad':''}"><b>${v==null?'··':hex(v,2)}</b><small>${esc(ch)}</small></div>`}
+      h+='</div></div>';
+    }
+    $('#stage').innerHTML=h+'</div>';
+  }
+  const code=()=>showCode(mode==='strcpy'?BUF_BAD:BUF_OK,mode==='strcpy'?[2]:[2,3],mode==='strcpy'?'strcpy: sem limite':'strncpy: copia no máximo 7 bytes e fecha com \\0');
+  async function run(){
+    if(busy)return;const e=epoch;lock(true);const m=mk(),orig=m.mem.slice();
+    const data=Array.from($('#in').value.slice(0,24)).map(c=>{const n=c.charCodeAt(0);return n>31&&n<127?n:63});
+    let bytes;
+    if(mode==='strcpy')bytes=data.concat([0]);else{bytes=data.slice(0,7);while(bytes.length<8)bytes.push(0)}
+    code();draw(m);log('Copiando byte a byte para a pilha…');
+    for(let i=0;i<bytes.length&&i<m.mem.length;i++){m.mem[i]=bytes[i];draw(m,i);await sleep(70);if(e!==epoch)return}
+    const bad={};let canBad=false,bpBad=false,retBad=false;
+    m.mem.forEach((v,i)=>{if(i>=8&&v!==orig[i]){bad[i]=true;if(m.reg[i]==='can')canBad=true;if(m.reg[i]==='bp')bpBad=true;if(m.reg[i]==='ret')retBad=true}});
+    draw(m,-1,bad);
+    const ri=m.reg.indexOf('ret'),ret=((m.mem[ri+3]<<24)|(m.mem[ri+2]<<16)|(m.mem[ri+1]<<8)|m.mem[ri])>>>0,over=Math.max(0,bytes.length-8);
+    const rl=mode==='strcpy'?3:4;
+    if(canBad){showCode(mode==='strcpy'?BUF_BAD:BUF_OK,[rl],'a função tenta retornar: o canário foi conferido');out('*** stack smashing detected ***');log('O canário mudou, então o programa aborta antes do ret. O ataque não consegue desviar a execução (o programa cai, mas o atacante não assume o controle).')}
+    else if(retBad){showCode(mode==='strcpy'?BUF_BAD:BUF_OK,[rl],'o ret usa o endereço que o atacante escolheu');out('ret = 0x'+hex(ret,8)+(ret===0x41414141?'  ("AAAA")':''));log('O endereço de retorno foi sobrescrito. Ao terminar a função, a CPU pula para 0x'+hex(ret,8)+'. Se o atacante escolher um endereço com código dele, ele assume o programa.',true)}
+    else if(bpBad){out('EBP salvo corrompido');log("Só o EBP salvo foi alterado: o '\\0' final do strcpy ultrapassou o buffer em 1 byte (erro off-by-one). O programa pode falhar ao sair da função chamadora.",true)}
+    else if(mode==='strcpy'&&can&&data.length===8){out('ret = 0x'+hex(ret,8)+' (intacto)');log("O '\\0' final caiu no primeiro byte do canário, que já vale 0x00. Por isso canários reais começam com byte zero: a cópia de string para ali.")}
+    else{out('ret = 0x'+hex(ret,8)+' (intacto)');log(`A entrada coube em buf (${Math.min(bytes.length,8)} de 8 bytes usados). ${mode==='strncpy'&&data.length>7?'O strncpy cortou a entrada em 7 caracteres: nada vazou.':'Nada foi sobrescrito.'}`)}
+    bd([['entrada',data.length+' bytes'],['buf','8 bytes'],['bytes além do buf',over]]);lock(false);
+  }
+  $('#run').onclick=run;
+  $$('[data-s]').forEach(b=>b.onclick=()=>{$('#in').value=b.dataset.s});
+  $$('#sm button').forEach(b=>b.onclick=()=>{if(busy)return;mode=b.dataset.m;$$('#sm button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));code();draw(mk())});
+  $$('#sc button').forEach(b=>b.onclick=()=>{if(busy)return;can=b.dataset.c==='1';$$('#sc button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));draw(mk())});
+  code();draw(mk());bd([['buf','8 bytes'],['pilha','cresce para baixo']]);log('Estado inicial da pilha. Digite uma entrada e clique em Executar.');
+}
+
+/* ---------- 6. Missões (EC) ---------- */
+const QEC=[
+ {q:'Um ataque de negação de serviço distribuído (DDoS) derruba o site de uma loja. Qual propriedade da segurança da informação foi atingida principalmente?',o:['Disponibilidade','Confidencialidade','Integridade','Não repúdio'],e:'O DDoS esgota os recursos do serviço para impedir o acesso legítimo. Isso fere a disponibilidade, a terceira letra de CID (confidencialidade, integridade, disponibilidade).'},
+ {q:'Por que a cifra de César é considerada insegura hoje?',o:['Tem poucas chaves (25) e preserva a frequência das letras, então força bruta e análise de frequência a quebram','Usa chave assimétrica, que é lenta demais','Não consegue cifrar letras maiúsculas','Gera um texto cifrado maior que o original, o que revela a chave'],e:'O espaço de chaves é minúsculo e cada letra sempre vira a mesma letra, preservando a estatística do idioma. As duas fraquezas aparecem nos laboratórios.'},
+ {q:'Ao mudar um único bit da mensagem, o SHA-256 devolve um hash totalmente diferente (cerca de metade dos bits muda). Essa propriedade chama-se:',o:['efeito avalanche','colisão','salting','esteganografia'],e:'No efeito avalanche, uma pequena mudança na entrada altera de forma imprevisível cerca de 50% da saída. Colisão é quando duas entradas diferentes geram o mesmo hash.'},
+ {q:'O site publica o SHA-256 oficial de um instalador. Como verificar se o arquivo baixado não foi adulterado?',o:['Calcular o SHA-256 do arquivo baixado e comparar com o valor publicado','Comparar só o tamanho do arquivo em bytes','Abrir o arquivo e ver se ele executa','Cifrar o arquivo com César e comparar'],e:'Hashes iguais indicam o mesmo conteúdo. Tamanho igual ou "executa" não provam integridade.'},
+ {q:'Qual a forma mais adequada de armazenar as senhas de usuários em um banco de dados?',o:['Guardar o hash com salt, gerado por função lenta (bcrypt ou Argon2)','Guardar a senha em texto puro, com o banco protegido por firewall','Cifrar com AES e deixar a chave no mesmo servidor','Guardar o MD5 sem salt, que é mais rápido'],e:'Hash não é reversível, o salt impede tabelas prontas e a função lenta encarece cada palpite. Cifra reversível com a chave ao lado vaza tudo junto.'},
+ {q:'Duas senhas sorteadas ao acaso: (I) 8 caracteres de um alfabeto de 62 símbolos; (II) 4 palavras sorteadas de uma lista de 7.776 palavras. Qual tem maior entropia?',o:['A II: ≈ 51,7 bits contra ≈ 47,6 bits da I','A I: ≈ 47,6 bits contra ≈ 25,8 bits da II','As duas têm a mesma entropia','Não é possível comparar entropias'],e:'Entropia = quantidade de sorteios × log2(tamanho da lista). I: 8 × log2(62) ≈ 47,6. II: 4 × log2(7776) ≈ 51,7.'},
+ {q:'Em um firewall, qual política padrão é a mais segura para pacotes que não casam com nenhuma regra?',o:['Negar tudo e permitir apenas o necessário','Permitir tudo e bloquear só o que for conhecido','Registrar e permitir','Encaminhar ao servidor interno para análise'],e:'Negar por padrão aplica o princípio do menor privilégio: o que ninguém autorizou não passa.'},
+ {q:'Um firewall tem, nesta ordem: (1) PERMITIR TCP de qualquer origem para a porta 22; (2) NEGAR TCP externo para a porta 22. Um pacote externo para a porta 22 será:',o:['permitido, porque a primeira regra que casa vence','negado, porque a regra 2 é mais específica','negado, porque NEGAR sempre tem prioridade','descartado sem registro, por conflito entre as regras'],e:'As regras são lidas em ordem e a primeira que casa decide. A regra 2 nunca é alcançada para esse pacote; a ordem das regras importa.'},
+ {q:'Qual falha de programação torna possível um estouro de buffer na pilha em C?',o:['Copiar dados para um vetor sem verificar o tamanho da entrada (por exemplo, com strcpy)','Usar variáveis locais em vez de globais','Declarar funções sem retorno','Compilar com otimização ligada'],e:'Sem limite de tamanho, a cópia ultrapassa o vetor e sobrescreve o que está acima dele, inclusive o endereço de retorno.'},
+ {q:'Qual a função do canário de pilha (stack canary)?',o:['Detectar a sobrescrita da pilha antes do retorno da função e abortar o programa','Cifrar o endereço de retorno','Impedir que o programa use a pilha','Aumentar o buffer automaticamente'],e:'O canário é um valor colocado entre os buffers e o endereço de retorno. Se mudou, houve estouro, e o programa aborta antes de usar o ret.'},
+ {q:'O princípio do menor privilégio determina que:',o:['cada usuário ou processo receba só as permissões necessárias para a sua tarefa','todos os administradores compartilhem uma conta','as permissões sejam concedidas e nunca revisadas','somente o administrador possa ter senha'],e:'Quanto menos permissão, menor o estrago se a conta ou o processo for comprometido.'},
+ {q:'O TLS usa criptografia assimétrica no começo da conexão e simétrica (AES) depois. Por quê?',o:['A assimétrica troca a chave com segurança sem segredo prévio, e a simétrica é muito mais rápida para os dados','A simétrica é sempre mais segura que a assimétrica','A assimétrica dispensa o uso de chaves','O AES não pode ser usado em redes'],e:'É o esquema híbrido: o custo da assimétrica fica só no início, e o tráfego volumoso usa a simétrica.'},
+ {q:'Qual medida protege uma aplicação contra injeção de SQL?',o:['Consultas parametrizadas (prepared statements) com validação da entrada','Cifrar o banco de dados com AES','Usar HTTPS no site','Trocar a senha do banco todo mês'],e:'Com parâmetros, a entrada do usuário é tratada como dado e nunca como parte do comando SQL. HTTPS e cifra de disco não impedem a injeção.'}
+];
+function labMissoesEC(){quizLab(QEC,{title:'Missões de segurança',lead:'13 perguntas no estilo do ENADE. Cada resposta mostra a explicação na hora.',msgHi:'Excelente. Você domina o básico de segurança de sistemas. Revise os laboratórios de Firewall e Buffer para fixar os detalhes.',msgMid:'Bom caminho. Volte aos laboratórios dos temas que errou, refaça as operações e tente de novo.',msgLow:'Vale rever os laboratórios com calma: opere cada um, leia as mensagens e clique em Refazer.'})}
+
+/* =====================================================================
+   ADS · LABORATÓRIO DE EMPREENDEDORISMO
+   ===================================================================== */
+
+/* ---------- 1. Business Model Canvas ---------- */
+const CVB={seg:['Segmentos de clientes','Para quem criamos valor?',1],val:['Proposta de valor','O que entregamos e que problema resolvemos?',2],can:['Canais','Como chegamos até o cliente?',3],rel:['Relacionamento','Como conquistamos e mantemos o cliente?',4],
+  rcv:['Fontes de receita','Como e quanto o cliente paga?',5],rec:['Recursos principais','O que precisamos ter para entregar?',7],atv:['Atividades-chave','O que precisamos fazer todo dia?',8],par:['Parcerias principais','Com quem fazemos isso?',9],cus:['Estrutura de custos','Quanto custa operar?',10]};
+const CVC=[['seg','Donos de mercadinhos de bairro com até 3 funcionários'],['val','Entrega em até 40 minutos, sem o mercadinho contratar motoboy fixo'],['can','App para o lojista e pedido do cliente final pelo WhatsApp'],
+  ['rel','Suporte por WhatsApp e treinamento de 30 minutos na instalação'],['rcv','Comissão de 8% por entrega mais mensalidade de R$ 49'],['rec','Equipe de desenvolvimento, plataforma em nuvem e base de entregadores'],
+  ['atv','Desenvolver o app, cadastrar entregadores e dar suporte'],['par','Associações de comerciantes e gateway de pagamento'],['cus','Servidores, salários da equipe, taxas do gateway e marketing']];
+const CVL=['LADO DO VALOR (cliente)','  1 Segmentos de clientes ..... para quem?','  2 Proposta de valor ......... o que entregamos?','  3 Canais .................... como chegamos?','  4 Relacionamento ............ como mantemos?','  5 Fontes de receita ......... como ganhamos?',
+  'LADO DA EFICIÊNCIA (empresa)','  6 Recursos principais ....... o que precisamos ter?','  7 Atividades-chave .......... o que precisamos fazer?','  8 Parcerias principais ...... com quem fazemos?','  9 Estrutura de custos ....... quanto custa?'];
+function labCanvas(){
+  $('#view').innerHTML=shell({wide:true,col:true,title:'Business Model Canvas: EntregaBairro',lead:'Caso: um app que liga mercadinhos de bairro a entregadores locais. Toque em um cartão e depois no bloco do Canvas onde ele se encaixa. Toque em um bloco vazio para ler a pergunta-guia.',
+    ctrl:'<button class="btn" id="tip" type="button">Dica</button><button class="btn" id="rs" type="button">Reiniciar</button>',codeTitle:'Os 9 blocos',codeHint:'Pergunta-guia de cada bloco; a linha acesa é o último bloco tocado.',
+    exam:'a questão descreve um elemento do negócio e pede o bloco do Canvas. Não confunda proposta de valor (o que entregamos) com segmento (para quem) e canais (como chegamos).',start:'Escolha um cartão para começar.'});
+  let deck,sel=null,placed={},err=0;
+  const draw=()=>{
+    $('#stage').innerHTML=`<div class="deck" aria-label="Cartões">${deck.filter(c=>!placed[c[0]]).map(c=>`<button class="chip${sel===c[0]?' sel':''}" data-c="${c[0]}" type="button">${esc(c[1])}</button>`).join('')||'<span class="lead" style="margin:0">Todos os cartões foram colocados.</span>'}</div>
+    <div class="canvas">${Object.keys(CVB).map(k=>`<button class="blk${placed[k]?' ok':''}" data-b="${k}" type="button" style="grid-area:${k}"><b>${CVB[k][0]}</b><span class="ph">${placed[k]?esc(CVC.filter(c=>c[0]===k)[0][1]):'?'}</span></button>`).join('')}</div>`;
+    $$('.chip').forEach(b=>b.onclick=()=>{sel=sel===b.dataset.c?null:b.dataset.c;draw();if(sel)log('Cartão escolhido. Agora toque no bloco onde ele se encaixa.')});
+    $$('.blk').forEach(b=>b.onclick=()=>place(b.dataset.b));
+    bd([['colocados',Object.keys(placed).length+'/9'],['erros',err]]);
+  };
+  const hl=k=>showCode(CVL,[CVB[k][2]],'bloco: '+CVB[k][0]);
+  function place(k){
+    if(placed[k]){hl(k);log(`${CVB[k][0]}: ${CVB[k][1]}`);return}
+    if(!sel){hl(k);log(`${CVB[k][0]}: ${CVB[k][1]} Escolha um cartão para encaixar aqui.`);return}
+    if(sel===k){placed[k]=true;sel=null;hl(k);draw();
+      if(Object.keys(placed).length===9){out(err===0?'Canvas completo sem erros':`Canvas completo com ${err} erro(s)`);log(err===0?'Perfeito. Você montou o modelo de negócio inteiro de primeira.':`Canvas completo. Revise os blocos em que errou: ${err} tentativa(s) fora do lugar.`)}
+      else log(`Certo. Isso é ${CVB[k][0].toLowerCase()}: responde "${CVB[k][1].toLowerCase()}"`);}
+    else{err++;const el=$(`[data-b="${k}"]`);el.classList.add('no');hl(k);log(`Não é aqui. O bloco "${CVB[k][0]}" responde: ${CVB[k][1]} Tente outro bloco.`,true);bd([['colocados',Object.keys(placed).length+'/9'],['erros',err]]);setTimeout(()=>el.classList.remove('no'),400)}
+  }
+  $('#tip').onclick=()=>{if(!sel){log('Escolha um cartão primeiro.',true);return}const el=$(`[data-b="${sel}"]`);el.classList.add('tip');err++;bd([['colocados',Object.keys(placed).length+'/9'],['erros',err]]);log(`Dica: o cartão pertence a "${CVB[sel][0]}". A dica conta como um erro.`)};
+  const start=()=>{deck=shuffle(CVC);sel=null;placed={};err=0;out('');draw();showCode(CVL,[]);log('Escolha um cartão para começar.')};
+  $('#rs').onclick=start;start();
+}
+
+/* ---------- 2. Ponto de equilíbrio ---------- */
+const PEF=['MC  = preço − custo variável','PE  = custos fixos ÷ MC','receita = volume × preço','lucro = volume × MC − custos fixos','margem de segurança = (volume − PE) ÷ volume'];
+function sld(id,lab,min,max,step,val){return `<label class="fld">${lab}<b id="${id}v"></b><input type="range" id="${id}" min="${min}" max="${max}" step="${step}" value="${val}"></label>`}
+function labEquilibrio(){
+  const D={p:49,cv:18,cf:6200,v:260};
+  $('#view').innerHTML=shell({title:'Ponto de equilíbrio',lead:'Um app por assinatura. Mexa no preço, nos custos e no volume e veja onde a receita cruza os custos.',
+    ctrl:`<div class="sliders">${sld('p','Preço da assinatura (R$)',5,200,1,D.p)}${sld('cv','Custo variável por cliente (R$)',0,150,1,D.cv)}${sld('cf','Custos fixos por mês (R$)',1000,30000,100,D.cf)}${sld('v','Clientes no mês',0,800,5,D.v)}</div>
+    <button class="btn" data-pr="cf" type="button">Cortar custo fixo em 20%</button><button class="btn" data-pr="p" type="button">Subir preço 10%</button><button class="btn" data-pr="r" type="button">Restaurar</button>`,
+    codeTitle:'Fórmulas',codeHint:'A linha acesa é a conta afetada pelo controle que você mexeu.',exam:'ponto de equilíbrio = custos fixos ÷ margem de contribuição. Saiba prever o que acontece com ele quando preço, custo variável ou custos fixos mudam.'});
+  const g=id=>+$('#'+id).value;
+  function calc(which){
+    const p=g('p'),cv=g('cv'),cf=g('cf'),v=g('v');
+    $('#pv').textContent=brl(p);$('#cvv').textContent=brl(cv);$('#cfv').textContent=brl(cf);$('#vv').textContent=v+' clientes';
+    const mc=p-cv,ok=mc>0,pe=ok?Math.ceil(cf/mc):null,lucro=v*mc-cf;
+    const xmax=Math.max(100,Math.ceil(Math.max(v,(pe||0)*1.6)/50)*50),ymax=Math.max(p*xmax,cf+cv*xmax),W=520,H=270,L=58,B=34,T=14,Rm=14;
+    const X=x=>L+(x/xmax)*(W-L-Rm),Y=y=>H-B-(y/ymax)*(H-B-T);
+    let s=`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Receita e custo total em função do volume">`;
+    for(let i=0;i<=4;i++){const yy=ymax*i/4;s+=`<line x1="${L}" x2="${W-Rm}" y1="${Y(yy)}" y2="${Y(yy)}" stroke="var(--line)"/><text class="tk" x="${L-6}" y="${Y(yy)+4}" text-anchor="end">${fmt(yy/1000,yy>=10000?0:1)}k</text>`}
+    for(let i=0;i<=4;i++){const xx=xmax*i/4;s+=`<text class="tk" x="${X(xx)}" y="${H-12}" text-anchor="middle">${fmt(xx)}</text>`}
+    s+=`<line x1="${X(0)}" y1="${Y(cf)}" x2="${X(xmax)}" y2="${Y(cf)}" stroke="var(--muted)" stroke-dasharray="4 4"/>`;
+    s+=`<line x1="${X(0)}" y1="${Y(0)}" x2="${X(xmax)}" y2="${Y(p*xmax)}" stroke="var(--accent)" stroke-width="3"/>`;
+    s+=`<line x1="${X(0)}" y1="${Y(cf)}" x2="${X(xmax)}" y2="${Y(cf+cv*xmax)}" stroke="var(--hot)" stroke-width="3"/>`;
+    s+=`<line x1="${X(v)}" x2="${X(v)}" y1="${Y(0)}" y2="${T}" stroke="var(--navy)" stroke-dasharray="3 3"/>`;
+    if(ok&&pe<=xmax)s+=`<circle cx="${X(pe)}" cy="${Y(pe*p)}" r="7" fill="var(--hot)" stroke="var(--ink)" stroke-width="2"/><text x="${Math.min(X(pe)+10,W-130)}" y="${Math.max(Y(pe*p)-12,T+10)}">PE = ${pe}</text>`;
+    s+=`<text class="tk" x="${W-Rm}" y="${Y(p*xmax)+14}" text-anchor="end" style="fill:var(--accent)">receita</text><text class="tk" x="${W-Rm}" y="${Math.max(Y(cf+cv*xmax)-6,T+24)}" text-anchor="end" style="fill:var(--hot)">custo total</text>`;
+    $('#stage').innerHTML=s+'</svg>';
+    showCode(PEF,which==='cf'?[1]:which==='v'?[3,4]:[0,1],which==='v'?'lucro e margem de segurança':which==='cf'?'o ponto de equilíbrio sobe com os custos fixos':'margem de contribuição e ponto de equilíbrio');
+    if(!ok){out('MC ≤ 0: não existe ponto de equilíbrio');log('O preço não cobre nem o custo variável. Cada cliente novo aumenta o prejuízo. Suba o preço ou reduza o custo variável.',true)}
+    else{out(`PE = ${pe} clientes · ${brl(pe*p)} de receita`);
+      log(lucro>=0?`Com ${v} clientes o lucro é ${brl(lucro)}. Margem de segurança de ${v?fmt((v-pe)/v*100,0):0}%: as vendas podem cair esse tanto antes do prejuízo.`:`Com ${v} clientes há prejuízo de ${brl(-lucro)}. Faltam ${Math.max(pe-v,0)} clientes para empatar.`,lucro<0)}
+    bd([['MC',ok?brl(mc)+' ('+fmt(mc/p*100,0)+'%)':'≤ 0'],['PE',ok?pe+' un.':'—'],['lucro',brl(lucro)],['receita',brl(v*p)]]);
+  }
+  ['p','cv','cf','v'].forEach(id=>$('#'+id).addEventListener('input',()=>calc(id)));
+  $$('[data-pr]').forEach(b=>b.onclick=()=>{const k=b.dataset.pr;
+    if(k==='cf')$('#cf').value=Math.max(1000,Math.round(g('cf')*0.8/100)*100);else if(k==='p')$('#p').value=Math.min(200,Math.round(g('p')*1.1));
+    else{$('#p').value=D.p;$('#cv').value=D.cv;$('#cf').value=D.cf;$('#v').value=D.v}
+    calc(k==='r'?'p':k)});
+  calc('p');
+}
+
+/* ---------- 3. CAC, LTV e churn ---------- */
+const MTF=['CAC = investimento em marketing ÷ clientes novos','margem mensal = mensalidade × margem bruta','vida média (meses) = 1 ÷ churn','LTV = margem mensal ÷ churn','LTV ÷ CAC ≥ 3  →  modelo saudável','payback = CAC ÷ margem mensal   (meta: ≤ 12 meses)'];
+function labMetricas(){
+  const D={mk:8000,n:80,m:49,g:70,c:5};
+  $('#view').innerHTML=shell({title:'CAC, LTV e churn',lead:'Quanto custa conquistar um cliente e quanto ele devolve antes de cancelar? Mexa nos números de uma startup de assinatura.',
+    ctrl:`<div class="sliders">${sld('mk','Marketing no mês (R$)',1000,40000,500,D.mk)}${sld('n','Clientes novos no mês',5,400,1,D.n)}${sld('m','Mensalidade (R$)',10,300,1,D.m)}${sld('g','Margem bruta (%)',10,95,1,D.g)}${sld('c','Churn mensal (%)',1,30,1,D.c)}</div>
+    <button class="btn" data-pr="ok" type="button">Startup saudável</button><button class="btn" data-pr="ch" type="button">Churn alto</button><button class="btn" data-pr="mk" type="button">Marketing caro</button>`,
+    codeTitle:'Fórmulas',codeHint:'A linha acesa é a conta afetada pelo controle que você mexeu.',exam:'CAC, LTV e churn aparecem em casos de startups e SaaS. Regra prática: LTV ÷ CAC igual ou acima de 3 e payback de até 12 meses.'});
+  const g=id=>+$('#'+id).value;
+  function calc(which){
+    const mk=g('mk'),n=g('n'),m=g('m'),mg=g('g')/100,c=g('c')/100;
+    $('#mkv').textContent=brl(mk);$('#nv').textContent=n;$('#mv').textContent=brl(m);$('#gv').textContent=Math.round(mg*100)+'%';$('#cv').textContent=Math.round(c*100)+'%';
+    const cac=mk/n,mm=m*mg,vida=1/c,ltv=mm/c,r=ltv/cac,pay=cac/mm,top=Math.max(cac,ltv);
+    const v=r>=3&&pay<=12?['ok','Saudável: cada real investido volta mais de 3 vezes e se paga em até 12 meses.']:r>=1?['mid','Atenção: o cliente se paga, mas a margem de segurança é pequena. Reduza o CAC ou o churn.']:['bad','Insustentável: o cliente rende menos do que custa para conquistar.'];
+    $('#stage').innerHTML=`<div class="bars"><div class="hb cac"><span>CAC · ${brl(cac,0)}</span><div class="t"><i style="width:${cac/top*100}%"></i></div></div><div class="hb"><span>LTV · ${brl(ltv,0)}</span><div class="t"><i style="width:${ltv/top*100}%"></i></div></div><div class="verd ${v[0]}">LTV ÷ CAC = ${fmt(r,1)}</div></div>`;
+    const map={mk:[0],n:[0],m:[1,3],g:[1,3],c:[2,3]};
+    showCode(MTF,(map[which]||[0]).concat([4]),'conta afetada pelo controle');
+    out(`payback de ${fmt(pay,1)} meses · vida média de ${fmt(vida,0)} meses`);log(v[1],v[0]==='bad');
+    bd([['CAC',brl(cac)],['LTV',brl(ltv)],['LTV÷CAC',fmt(r,1)],['payback',fmt(pay,1)+' meses']]);
+  }
+  ['mk','n','m','g','c'].forEach(id=>$('#'+id).addEventListener('input',()=>calc(id)));
+  const P={ok:[8000,80,49,70,5],ch:[8000,80,49,70,25],mk:[30000,50,49,70,5]};
+  $$('[data-pr]').forEach(b=>b.onclick=()=>{const p=P[b.dataset.pr];['mk','n','m','g','c'].forEach((id,i)=>$('#'+id).value=p[i]);calc(b.dataset.pr==='ch'?'c':'mk')});
+  calc('mk');
+}
+
+/* ---------- 4. MVP: impacto × esforço ---------- */
+const MVF=['se impacto ≥ 6 e esforço ≤ 5  →  FAZER AGORA (entra no MVP)','se impacto ≥ 6 e esforço > 5   →  PLANEJAR','se impacto < 6 e esforço ≤ 5   →  SE SOBRAR TEMPO','se impacto < 6 e esforço > 5   →  EVITAR','','MVP = menor versão que valida a hipótese com clientes reais'];
+const FT0=[['Cadastro do lojista',9,3],['Pedido pelo WhatsApp',9,4],['Rastreamento em mapa',7,9],['Pagamento por Pix',8,5],['Programa de fidelidade',4,6],['Chat interno',3,7],['Avaliação do entregador',5,3],['Painel de BI avançado',3,9]];
+function quad(f){return f[1]>=6?(f[2]<=5?0:1):(f[2]<=5?2:3)}
+const QN=['FAZER AGORA','PLANEJAR','SE SOBRAR TEMPO','EVITAR'],QC=['var(--ok)','var(--hot)','var(--accent)','var(--bad)'];
+function labMVP(){
+  let F=FT0.map(f=>f.slice()),sel=0;
+  $('#view').innerHTML=shell({title:'MVP: o que fazer primeiro',lead:'Cada funcionalidade tem impacto (valor para o cliente) e esforço (custo para construir). Toque em uma bolha ou na lista e ajuste os valores.',
+    ctrl:`<div class="sliders"><label class="fld">Impacto da funcionalidade selecionada<b id="iv"></b><input type="range" id="im" min="1" max="10" step="1"></label><label class="fld">Esforço da funcionalidade selecionada<b id="ev"></b><input type="range" id="ef" min="1" max="10" step="1"></label></div>
+    <button class="btn p" id="mont" type="button">Montar MVP</button><button class="btn" id="rst" type="button">Restaurar valores</button>`,
+    codeTitle:'Regra de decisão',codeHint:'A linha acesa é o quadrante da funcionalidade selecionada.',exam:'MVP é a menor versão que valida a hipótese, não um produto pela metade. Priorizar é escolher o que não fazer agora.'});
+  function draw(){
+    const S=36,L=34,T=10,W=L+10*S+8,H=T+10*S+30,X=e=>L+(e-.5)*S,Y=i=>T+(10-i+.5)*S;
+    let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Matriz impacto por esforço">`;
+    const q=(x,y,w,h,c)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${c}" opacity=".10"/>`,mx=L+5*S,my=T+4*S;
+    s+=q(L,T,mx-L,my-T,QC[0])+q(mx,T,L+10*S-mx,my-T,QC[1])+q(L,my,mx-L,T+10*S-my,QC[2])+q(mx,my,L+10*S-mx,T+10*S-my,QC[3]);
+    s+=`<line x1="${mx}" x2="${mx}" y1="${T}" y2="${T+10*S}" stroke="var(--cell-line)"/><line x1="${L}" x2="${L+10*S}" y1="${my}" y2="${my}" stroke="var(--cell-line)"/><rect x="${L}" y="${T}" width="${10*S}" height="${10*S}" fill="none" stroke="var(--line)"/>`;
+    s+=`<text class="tk" x="${L+4}" y="${T+14}">${QN[0]}</text><text class="tk" x="${L+10*S-4}" y="${T+14}" text-anchor="end">${QN[1]}</text><text class="tk" x="${L+4}" y="${T+10*S-6}">${QN[2]}</text><text class="tk" x="${L+10*S-4}" y="${T+10*S-6}" text-anchor="end">${QN[3]}</text>`;
+    s+=`<text class="tk" x="${L+5*S}" y="${H-6}" text-anchor="middle">esforço →</text><text class="tk" x="10" y="${T+5*S}" transform="rotate(-90 10 ${T+5*S})" text-anchor="middle">impacto →</text>`;
+    F.forEach((f,i)=>{const c=QC[quad(f)];s+=`<g data-i="${i}" style="cursor:pointer" tabindex="0" role="button" aria-label="${esc(f[0])}"><circle cx="${X(f[2])}" cy="${Y(f[1])}" r="${i===sel?15:12}" fill="${c}" stroke="${i===sel?'var(--hot)':'var(--bg)'}" stroke-width="${i===sel?4:2}"/><text x="${X(f[2])}" y="${Y(f[1])+4}" text-anchor="middle" style="fill:#fff">${i+1}</text></g>`});
+    s+='</svg>';
+    $('#stage').innerHTML=`<div class="mvp">${s}<div class="flist">${F.map((f,i)=>`<button class="fbtn${i===sel?' sel':''}" data-i="${i}" type="button"><i>${i+1}</i><span>${esc(f[0])}<br><small style="color:var(--muted)">${QN[quad(f)]}</small></span></button>`).join('')}</div></div>`;
+    $$('#stage [data-i]').forEach(e=>{const go=()=>{sel=+e.dataset.i;draw();sync()};e.onclick=go;e.onkeydown=k=>{if(k.key==='Enter'||k.key===' '){k.preventDefault();go()}}});
+    $('#iv').textContent=F[sel][1];$('#ev').textContent=F[sel][2];
+  }
+  function sync(){const f=F[sel];$('#im').value=f[1];$('#ef').value=f[2];$('#iv').textContent=f[1];$('#ev').textContent=f[2];const qd=quad(f);
+    showCode(MVF,[qd],f[0]);log(`${f[0]}: impacto ${f[1]}, esforço ${f[2]} → ${QN[qd]}. ${qd===0?'Entra no MVP.':qd===1?'Valioso, mas caro: planeje para depois do MVP.':qd===2?'Barato e de pouco valor: só se sobrar tempo.':'Caro e de pouco valor: evite por enquanto.'}`);
+    const n=F.filter(x=>quad(x)===0);bd([['no MVP',n.length],['esforço do MVP',n.reduce((a,x)=>a+x[2],0)+' pontos']])}
+  $('#im').addEventListener('input',()=>{F[sel][1]=+$('#im').value;draw();sync()});
+  $('#ef').addEventListener('input',()=>{F[sel][2]=+$('#ef').value;draw();sync()});
+  $('#mont').onclick=()=>{const n=F.map((f,i)=>[f,i]).filter(x=>quad(x[0])===0);showCode(MVF,[0,5],'MVP: só o quadrante FAZER AGORA');
+    if(!n.length){log('Nenhuma funcionalidade ficou em FAZER AGORA. Revise impacto e esforço.',true);out('');return}
+    out(`MVP: ${n.map(x=>x[0][0]).join(' + ')}`);log(`O MVP tem ${n.length} funcionalidade(s) e ${n.reduce((a,x)=>a+x[0][2],0)} pontos de esforço. Lance, meça e só depois construa o que ficou em PLANEJAR.`)};
+  $('#rst').onclick=()=>{F=FT0.map(f=>f.slice());out('');draw();sync()};
+  draw();sync();
+}
+
+/* ---------- 5. Caixa e runway ---------- */
+const CXF=['receita(m) = receita(1) × (1 + crescimento)^(m − 1)','saldo(m) = saldo(m − 1) + receita(m) − custos','burn líquido = custos − receita','runway = meses até saldo < 0','capital necessário = |menor saldo|'];
+function labCaixa(){
+  const D={c0:60000,cu:18000,r1:3000,g:15};
+  $('#view').innerHTML=shell({title:'Caixa e runway',lead:'A empresa pode ter receita crescendo e ainda assim quebrar: o que importa é quando o caixa zera. Projete 18 meses.',
+    ctrl:`<div class="sliders">${sld('c0','Caixa inicial (R$)',10000,300000,5000,D.c0)}${sld('cu','Custos por mês (R$)',5000,60000,500,D.cu)}${sld('r1','Receita no mês 1 (R$)',0,30000,500,D.r1)}${sld('g','Crescimento da receita (% ao mês)',0,40,1,D.g)}</div>
+    <button class="btn p" id="play" type="button">Simular mês a mês</button><button class="btn" id="rst" type="button">Restaurar</button>`,
+    codeTitle:'Fórmulas',codeHint:'A linha acesa é a conta afetada pelo controle que você mexeu.',exam:'fluxo de caixa explica por que empresas lucrativas no papel quebram: o caixa acaba antes de a receita cobrir os custos. Runway = caixa ÷ queima líquida.'});
+  const g=id=>+$('#'+id).value,N=18;
+  function proj(){const c0=g('c0'),cu=g('cu'),r1=g('r1'),gr=g('g')/100,rec=[],sal=[];let s=c0;for(let m=1;m<=N;m++){const r=r1*Math.pow(1+gr,m-1);rec.push(r);s+=r-cu;sal.push(s)}return{c0,cu,r1,gr,rec,sal}}
+  function chart(P,upto){
+    const W=520,H=270,L=58,B=34,T=14,Rm=14,all=P.sal.concat([P.c0]),mx=Math.max.apply(null,all),mn=Math.min.apply(null,all.concat([0])),ymax=Math.max(mx,1),ymin=mn;
+    const X=m=>L+(m/N)*(W-L-Rm),Y=v=>T+(ymax-v)/(ymax-ymin||1)*(H-B-T);
+    let s=`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Saldo de caixa por mês">`;
+    for(let i=0;i<=4;i++){const v=ymin+(ymax-ymin)*i/4;s+=`<line x1="${L}" x2="${W-Rm}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text class="tk" x="${L-6}" y="${Y(v)+4}" text-anchor="end">${fmt(v/1000,0)}k</text>`}
+    for(let m=0;m<=N;m+=3)s+=`<text class="tk" x="${X(m)}" y="${H-12}" text-anchor="middle">${m}</text>`;
+    s+=`<line x1="${L}" x2="${W-Rm}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--ink)" stroke-width="1.5"/>`;
+    const pts=[[0,P.c0]].concat(P.sal.slice(0,upto).map((v,i)=>[i+1,v]));
+    s+=`<polyline fill="none" stroke="var(--accent)" stroke-width="3" points="${pts.map(p=>X(p[0])+','+Y(p[1])).join(' ')}"/>`;
+    pts.forEach((p,i)=>{if(i>0)s+=`<circle cx="${X(p[0])}" cy="${Y(p[1])}" r="4" fill="${p[1]<0?'var(--bad)':'var(--accent)'}"/>`});
+    const z=P.sal.findIndex(v=>v<0);if(z>=0&&upto>z)s+=`<text x="${Math.min(X(z+1)+8,W-120)}" y="${Y(0)-8}" style="fill:var(--bad)">caixa zera: mês ${z+1}</text>`;
+    s+=`<text class="tk" x="${W/2}" y="${H-1}" text-anchor="middle">mês</text>`;
+    $('#stage').innerHTML=s+'</svg>';
+  }
+  function summary(which){
+    const P=proj(),z=P.sal.findIndex(v=>v<0),eq=P.rec.findIndex(r=>r>=P.cu),need=Math.max(0,-Math.min.apply(null,P.sal));
+    $('#c0v').textContent=brl(P.c0);$('#cuv').textContent=brl(P.cu);$('#r1v').textContent=brl(P.r1);$('#gv').textContent=Math.round(P.gr*100)+'%';
+    const burn=P.cu-P.r1,map={c0:[3],cu:[1,2],r1:[0,2],g:[0]};
+    showCode(CXF,(map[which]||[1]).concat(z>=0?[3]:[]),'conta afetada pelo controle');
+    out(z>=0?`O caixa zera no mês ${z+1}`:`O caixa dura mais de ${N} meses`);
+    log(z>=0?`A queima líquida inicial é ${brl(burn)} por mês. ${eq>=0?`A receita só cobre os custos no mês ${eq+1}`:'A receita não cobre os custos em 18 meses'}; para chegar lá faltam ${brl(need)} de capital (captação ou corte de custos).`:`O caixa não zera em ${N} meses. ${eq>=0?`A receita cobre os custos no mês ${eq+1}.`:''}`,z>=0);
+    bd([['runway',z>=0?(z+1)+' meses':'> '+N+' meses'],['equilíbrio operacional',eq>=0?'mês '+(eq+1):'> '+N],['capital necessário',brl(need)]]);
+    return P;
+  }
+  const upd=w=>{chart(summary(w),N)};
+  ['c0','cu','r1','g'].forEach(id=>$('#'+id).addEventListener('input',()=>upd(id)));
+  $('#play').onclick=async()=>{if(busy)return;const e=epoch;lock(true);const P=summary('cu');for(let m=0;m<=N;m++){chart(P,m);await sleep(110);if(e!==epoch)return}lock(false)};
+  $('#rst').onclick=()=>{$('#c0').value=D.c0;$('#cu').value=D.cu;$('#r1').value=D.r1;$('#g').value=D.g;upd('c0')};
+  upd('c0');
+}
+
+/* ---------- 6. Missões (ADS) ---------- */
+const QADS=[
+ {q:'Para o empreendedorismo, uma boa oportunidade de negócio é:',o:['um problema real de um grupo de pessoas que aceita pagar por uma solução','uma ideia inédita que ninguém nunca teve','uma tecnologia nova, mesmo sem clientes definidos','um produto copiado de um concorrente com preço menor'],e:'Oportunidade não é só ideia: é um problema real, de pessoas reais, com disposição de pagar. Isso se testa antes de construir.'},
+ {q:'No Business Model Canvas, qual bloco responde "como a empresa ganha dinheiro"?',o:['Fontes de receita','Proposta de valor','Estrutura de custos','Canais'],e:'Fontes de receita mostram como e quanto cada segmento paga. Estrutura de custos é o outro lado: quanto custa operar.'},
+ {q:'Um app de entregas fecha contrato com um gateway de pagamento para cobrar os clientes. No Canvas, isso entra em:',o:['Parcerias principais','Canais','Recursos principais','Segmentos de clientes'],e:'O gateway é um parceiro externo que faz parte da operação. Parcerias principais respondem "com quem fazemos?".'},
+ {q:'Preço de R$ 50, custo variável de R$ 20 por unidade e custos fixos de R$ 9.000 por mês. Qual o ponto de equilíbrio?',o:['300 unidades','180 unidades','450 unidades','225 unidades'],e:'MC = 50 − 20 = 30. PE = 9.000 ÷ 30 = 300 unidades. Usar o preço no lugar da MC (9.000 ÷ 50 = 180) é o erro mais comum.'},
+ {q:'Mantidos os demais valores, o que acontece com o ponto de equilíbrio quando os custos fixos aumentam?',o:['Aumenta, pois é preciso vender mais para cobrir os custos','Diminui, pois a empresa fica mais eficiente','Não muda, pois só depende do preço','Fica igual, mas o lucro por unidade cai'],e:'PE = custos fixos ÷ MC. O numerador cresce e a MC fica igual, então o PE sobe.'},
+ {q:'Uma startup gastou R$ 6.000 em marketing e conquistou 50 clientes novos no mês. Qual o CAC?',o:['R$ 120','R$ 300','R$ 12','R$ 50'],e:'CAC = investimento em aquisição ÷ clientes novos = 6.000 ÷ 50 = R$ 120.'},
+ {q:'Mensalidade de R$ 60, margem bruta de 50% e churn de 5% ao mês. Qual o LTV aproximado?',o:['R$ 600','R$ 1.200','R$ 30','R$ 300'],e:'Margem mensal = 60 × 0,5 = R$ 30. LTV = 30 ÷ 0,05 = R$ 600. Esquecer a margem dá R$ 1.200.'},
+ {q:'Com LTV de R$ 600 e CAC de R$ 300, a relação LTV/CAC é 2. Pela regra prática, a empresa deve:',o:['ter atenção: o ideal é LTV/CAC igual ou acima de 3, então vale reduzir o CAC ou o churn','comemorar, pois qualquer valor acima de 1 é o ideal','parar de vender imediatamente','dobrar o marketing sem mudar nada'],e:'Acima de 1 o cliente se paga, mas a folga é pequena para cobrir custos fixos e riscos. A meta usual é 3 ou mais.'},
+ {q:'O que é um MVP (produto mínimo viável)?',o:['A menor versão do produto capaz de testar a hipótese central com clientes reais','Um protótipo sem nenhuma função, só visual','A versão final com todos os recursos planejados','Um relatório financeiro para investidores'],e:'O MVP serve para aprender rápido com clientes reais gastando pouco. Não é produto ruim: é produto focado em uma hipótese.'},
+ {q:'Na matriz impacto × esforço, uma funcionalidade de alto impacto e baixo esforço deve:',o:['ser feita primeiro, pois entra no MVP','ser descartada','ficar para o último ano do projeto','ser terceirizada sempre'],e:'Alto impacto com baixo esforço é o melhor custo-benefício: é o quadrante "fazer agora".'},
+ {q:'Caixa de R$ 90.000 e queima líquida de R$ 15.000 por mês. Qual o runway?',o:['6 meses','9 meses','3 meses','15 meses'],e:'Runway = caixa ÷ queima líquida = 90.000 ÷ 15.000 = 6 meses, se a queima não mudar.'},
+ {q:'Um churn mensal alto significa que:',o:['muitos clientes cancelam, o que reduz o LTV e encarece o crescimento','a empresa cresce mais rápido','o CAC é zero','a margem bruta aumenta'],e:'LTV = margem mensal ÷ churn. Quanto maior o churn, menor a vida média do cliente e o LTV.'},
+ {q:'Em uma startup, "pivotar" significa:',o:['mudar uma parte importante da estratégia depois de aprender com dados, mantendo a visão','encerrar a empresa','trocar o nome da marca','contratar mais pessoas'],e:'Pivotar é mudar o caminho (cliente, produto ou modelo de receita) com base no que os testes mostraram, sem abandonar o problema que se quer resolver.'}
+];
+function labMissoesADS(){quizLab(QADS,{title:'Missões de empreendedorismo',lead:'13 perguntas no estilo do ENADE. Cada resposta mostra a explicação na hora.',msgHi:'Excelente. Você domina o básico de modelo de negócio e métricas. Teste outros números nos laboratórios para ganhar intuição.',msgMid:'Bom caminho. Volte aos laboratórios dos temas que errou, mexa nos controles e tente de novo.',msgLow:'Vale rever os laboratórios com calma: opere cada um, leia as mensagens e clique em Refazer.'})}
+
+/* =====================================================================
+   NAVEGAÇÃO
+   ===================================================================== */
+const COURSES={
+  ec:{nome:'Engenharia da Computação',titulo:'Laboratório de Segurança de Sistemas de Computação',sub:'Cifre, calcule hashes, meça senhas, filtre pacotes e provoque um estouro de buffer. Tudo passo a passo.',
+    labs:[{tab:'Cifra de César',render:labCesar},{tab:'Hash',render:labHash},{tab:'Senhas',render:labSenha},{tab:'Firewall',render:labFirewall},{tab:'Estouro de buffer',render:labBuffer},{tab:'Missões',render:labMissoesEC}]},
+  ads:{nome:'Análise e Desenvolvimento de Sistemas',titulo:'Laboratório de Empreendedorismo',sub:'Monte o modelo de negócio, faça as contas e decida o que construir primeiro. Tudo passo a passo.',
+    labs:[{tab:'Canvas',render:labCanvas},{tab:'Ponto de equilíbrio',render:labEquilibrio},{tab:'CAC e LTV',render:labMetricas},{tab:'MVP',render:labMVP},{tab:'Caixa',render:labCaixa},{tab:'Missões',render:labMissoesADS}]}
+};
+function selectTab(i){
+  epoch++;busy=false;
+  $$('#tabs button').forEach(b=>b.setAttribute('aria-selected',String(+b.dataset.i===i)));
+  COURSES[curso].labs[i].render();
+}
+function openCurso(c){
+  curso=c;document.body.dataset.curso=c;const C=COURSES[c];
+  $('#home').hidden=true;$('#course').hidden=false;
+  $('#cnome').textContent=C.nome;$('#ctitle').textContent=C.titulo;$('#csub').textContent=C.sub;
+  $('#tabs').innerHTML=C.labs.map((l,i)=>`<button role="tab" data-i="${i}" type="button" aria-selected="false">${l.tab}</button>`).join('');
+  $$('#tabs button').forEach(b=>b.onclick=()=>selectTab(+b.dataset.i));
+  selectTab(0);
+}
+function goHome(){epoch++;busy=false;curso=null;delete document.body.dataset.curso;$('#course').hidden=true;$('#home').hidden=false;$('#view').innerHTML=''}
+function route(){
+  let h='';try{h=location.hash.replace('#','')}catch(e){}
+  if((h==='ads'||h==='ec')&&curso!==h)openCurso(h);
+  else if(h!=='ads'&&h!=='ec'&&curso!==null)goHome();
+}
+function go(h){try{location.hash=h}catch(e){}route()}
+$$('[data-go]').forEach(b=>b.onclick=()=>{curso=null;go(b.dataset.go);if(curso===null)openCurso(b.dataset.go)});
+$('#back').onclick=()=>{go('');if(curso!==null)goHome()};
+window.addEventListener('hashchange',route);
+route();
+})();
+</script>
+
+</html>
